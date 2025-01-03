@@ -56,3 +56,4 @@ tzdata==2024.2
 urllib3==2.3.0
 watchdog==6.0.0
 websockets==14.1
+pyaudio @ https://files.pythonhosted.org/packages/3e/9c/b4f2db850bb8ab1237f452b2c7a45edb9d3b9ad3f6eec8a2db5e02345126/PyAudio-0.2.11-cp39-cp39-manylinux2010_x86_64.whl
