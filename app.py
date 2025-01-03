@@ -1,74 +1,45 @@
 import streamlit as st
-from elevenlabs.client import ElevenLabs
-from elevenlabs.conversational_ai.conversation import Conversation
-from elevenlabs.conversational_ai.default_audio_interface import DefaultAudioInterface
-import threading
 
-# Initialize ElevenLabs client
-API_KEY = "sk_856f6a1b42a4520697bd34d11149a8d1e42e27d98d72bdc9"  # Replace with your API key
-AGENT_ID = "iji8JJCS4OTz3KU6XBq5"
-client = ElevenLabs(api_key=API_KEY)
+# HTML and JavaScript for audio recording
+audio_recorder_html = """
+<script>
+async function startRecording() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mediaRecorder = new MediaRecorder(stream);
+    let chunks = [];
 
-# Placeholder for the conversation instance
-conversation = None
-conversation_running = False
+    mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+    mediaRecorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: 'audio/wav' });
+        chunks = [];
+        const formData = new FormData();
+        formData.append('file', blob, 'audio.wav');
 
-def initialize_conversation():
-    global conversation, conversation_running
+        // Send the audio file to the backend
+        const response = await fetch('http://<your-ec2-public-ip>:8000/upload-audio', {
+            method: 'POST',
+            body: formData
+        });
 
-    try:
-        # Initialize the conversation
-        conversation = Conversation(
-            client=client,
-            agent_id=AGENT_ID,
-            requires_auth=bool(API_KEY),
-            audio_interface=DefaultAudioInterface(),
-            callback_agent_response=lambda response: st.write(f"**Agent**: {response}"),
-            callback_agent_response_correction=lambda original, corrected: st.write(f"**Correction**: {original} → {corrected}"),
-            callback_user_transcript=lambda transcript: st.write(f"**You**: {transcript}"),
-            callback_latency_measurement=lambda latency: st.write(f"**Latency**: {latency}ms"),
-        )
+        if (response.ok) {
+            const audioBlob = await response.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            audio.play();
+        } else {
+            alert('Error: ' + (await response.text()));
+        }
+    };
 
-        # Start the conversation in a background thread
-        conversation_running = True
-        threading.Thread(target=run_conversation, daemon=True).start()
+    mediaRecorder.start();
+    setTimeout(() => mediaRecorder.stop(), 5000); // Record for 5 seconds
+}
+</script>
 
-    except Exception as e:
-        st.error(f"An error occurred while initializing the conversation: {e}")
+<button onclick="startRecording()">Record Audio</button>
+"""
 
-def run_conversation():
-    global conversation_running
-
-    try:
-        # Start the conversation session
-        conversation.start_session()
-        conversation_id = conversation.wait_for_session_end()
-        st.success(f"Conversation ended. Conversation ID: {conversation_id}")
-    except Exception as e:
-        st.error(f"An error occurred during the conversation: {e}")
-    finally:
-        conversation_running = False
-
-# Streamlit UI
-st.title("TATA AIG Voice Assistant")
-st.image(
-    "https://www.tataaig.com/logo-min.png",
-    caption="Tata AIG Insurance",
-    use_container_width=False,
-    width=200
-)
-
-st.write("Press the button below to start a voice conversation. The microphone will be activated, and you can talk to the AI in real time.")
-
-if st.button("Start Voice Conversation"):
-    if conversation_running:
-        st.warning("Conversation is already running. Please wait until it ends.")
-    else:
-        st.info("Initializing the voice assistant...")
-        initialize_conversation()
-
-# Display status of the conversation
-if conversation_running:
-    st.info("Voice assistant is running...")
-else:
-    st.success("Voice assistant is not running.")
+# Render the HTML/JS in Streamlit
+st.title("Voice-Enabled ElevenLabs Assistant")
+st.markdown("Click the button below to record a 5-second audio clip.")
+st.components.v1.html(audio_recorder_html)
