@@ -1,12 +1,8 @@
 import streamlit as st
-import pyaudio
-import signal
 from elevenlabs.client import ElevenLabs
 from elevenlabs.conversational_ai.conversation import Conversation
 from elevenlabs.conversational_ai.default_audio_interface import DefaultAudioInterface
-import os
 import threading
-import time
 
 # Initialize ElevenLabs client
 API_KEY = "sk_856f6a1b42a4520697bd34d11149a8d1e42e27d98d72bdc9"  # Replace with your API key
